@@ -393,6 +393,7 @@ class IMG(EmptyElement):
         'alt': None,
         'border': None,
         'class': None,
+        'src': None,
         'vspace': None,
     }
 

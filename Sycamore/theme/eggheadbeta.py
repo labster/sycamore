@@ -40,6 +40,7 @@ class Theme(ThemeBase):
         (name, 'iso-8859-1', 'all', 'common'),
         (name, 'iso-8859-1', 'screen', 'layout'),
         (name, 'iso-8859-1', 'screen', 'style'),
+        (name, 'iso-8859-1', 'screen', 'map'),
         (name, 'iso-8859-1', 'print', 'layout'),
         (name, 'iso-8859-1', 'print', 'style'),
         )

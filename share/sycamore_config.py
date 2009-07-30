@@ -18,9 +18,9 @@ __directory__ = os.path.dirname(os.path.abspath(__file__))
 from blacklist import *
 
 # basic options (you normally need to change these)
-wiki_name = 'wikispot'
-sitename = 'Our Untitled Wiki'
-interwikiname = None
+wiki_name = 'map'
+sitename = 'Wiki Map'
+interwikiname = 'map'
 interwiki_map = 'Interwiki Map'
 
 # You probably don't need to change this.
@@ -40,21 +40,21 @@ web_dir = ''
 # this is the directory where the images and javascript for wiki stuff is stored
 #  this is relative to the web server's root
 # no trailing slash
-url_prefix = '/wiki'
+url_prefix = '/mapping2/sycamore_base/share/web/wiki'
 
 #displayed logo. If you don't want an image logo, comment this out and the sitename will be used as a text-based logo.
 #image_logo = 'syclogo.png'
 
 # the phrase displayed in the title on the front page
 #catchphrase = 'The definitive resource for Davis, California'
-catchphrase = 'Your phrase here..'
+catchphrase = "It's a map"
 
 #if the main files are placed somewhere inside of a directory such as http://daviswiki.org/dev/index.cgi as opposed to http://daviswiki.org/index.cgi
 #then this var lets us figure out the proper relative link
 # so if you have ~/public_html/wiki/index.cgi as your wiki executable then this would be "wiki/index.cgi"
 # if there is no index.cgi then it would be "wiki"
 # this is anything after the root of where your web stuff is installed
-relative_dir = ''
+relative_dir = 'mapping2/sycamore_base/share/web/index.cgi'
 # DYNAMIC relative_dir:
 # relative_dir can also be of the form (string, quoted parameters), e.g ("wikis/%s", "wiki_name")
 #relative_dir = ("wikis/%s", "wiki_name")
@@ -77,24 +77,24 @@ edit_agreement_text = """By clicking "Save Changes" you are agreeing to release 
 footer_buttons = ["""<a href="http://creativecommons.org/licenses/by/3.0/"><img alt="Creative Commons License" border="0" src="/wiki/eggheadbeta/img/cc.png" /></a>""", """<a href="http://wikispot.org/Donate"><img src="/wiki/eggheadbeta/img/donate.png" border="0" alt="donate"/></a>"""]
 
 # tabs at the top of the browser for people who aren't logged in
-tabs_nonuser = ['Front Page', 'People', 'Recent Changes']
+tabs_nonuser = ['Front Page','Map','People','Recent Changes']
 # tabs at teh top of the browser for people who are logged in
-tabs_user = ['Front Page', 'People', 'Bookmarks', 'Recent Changes']
+tabs_user = ['Front Page', 'Map','People', 'Bookmarks', 'Recent Changes']
 
 # Change this to a google maps API key that *you* generate
 # Don't bother with this if you don't plan on using the google maps.
-gmaps_api_key = 'thisIsNotARealKey!'
+gmaps_api_key ='ABQIAAAAt6V0O8QSUhWYNq8DkAns2BR6Jje8vWUgECuVUrhmDOOzOIKOIBRn393G-KrYt023dlP3GbJo6Q6MhQ'
 
 wiki_farm_from_wiki_msg = """<div style="float: right; width: 12em; padding: 1em; border: 1px dashed gray; background-color: #ccddff;">%(wiki_name)s is a member of the %(base_wiki_sitename)s community, a nonprofit effort that allows people everywhere to easily collaborate on wikis.<br/><br/>Your account here will work on %(wiki_name)s, the %(base_wiki_name)s hub, and all the other wikis that are part of the %(base_wiki_sitename_link)s community.</div>"""
 
 # database settings.
 db_type = 'postgres'  # can be 'mysql' or 'postgres'
 db_name = 'wiki'
-db_user = 'wiki'
-db_user_password = 'wiki'
+db_user = 'postgres'
+db_user_password = 'satire'
 # The IP address or hostname of the database.  Leave empty for local non-networked connection (usually works)
 # (setting db_host = 'localhost' usually makes a local networked connection ;)
-db_host = '' 
+db_host = 'localhost' 
 
 # location of the GNU Diff3 application.
 diff3_location = '/usr/bin/diff3'
@@ -147,8 +147,8 @@ allowed_actions = ['DeletePage','AttachFile']
 
 # for standalone http server (see installhtml/index)
 httpd_host = "127.0.0.1"
-httpd_port = 80
-httpd_user = "root"
+httpd_port = 8880
+httpd_user = "madadh"
 
 theme_default = 'eggheadbeta'
 

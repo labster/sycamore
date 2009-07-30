@@ -31,7 +31,7 @@ from Sycamore.util import pysupport
 #############################################################################
 
 names = [ "titleindex", "pagecount", "userpreferences", "generalsettings",
-          "securitysettings", "usergroups",
+          "securitysettings", "usergroups", "mapsettings",
           # Macros with arguments
           "icon", "anchor", "mailto", "getval", "search", "listtemplates",
 ]
@@ -271,6 +271,13 @@ class Macro:
             formatter = self.formatter
         from Sycamore import sitesettings
         return formatter.rawHTML(sitesettings.getUserGroupForm(self.request))
+
+    def _macro_mapsettings(self, arg, formatter=None):
+        if not formatter:
+            formatter = self.formatter
+        parser = self.parser
+        from Sycamore import sitesettings
+        return formatter.rawHTML(sitesettings.getMapForm(self.request))
 
     def _macro_search(self, arg, formatter=None):
         if not formatter:

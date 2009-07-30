@@ -11,7 +11,8 @@
     
     Please use sycamore_config.py to configure your wiki.
 
-    @copyright: 2005-2007 by Philip Neustrom <philipn@gmail.com>
+    @copyright: 2005-2009 by Philip Neustrom <philipn@gmail.com>
+    @copyright: 2009 by Brent Laabs <bslaabs@gmail.com>
     @copyright: 2000-2004 by Jürgen Hermann <jh@web.de>
     @license: GNU GPL, see COPYING for details.
 """
@@ -289,8 +290,8 @@ _cfg_defaults_global = {
         },
     'paypal_address': 'donate@example.com',
     'paypal_name': 'Wiki Spot',
-    'processors': False,
     'read_only': False, # is the wiki set to be read only?
+    'processors': False,
     'refresh': None, # (minimum_delay, type), e.g.: (2, 'internal')
     'relative_dir': 'index.cgi',
     'remote_search': False,
@@ -349,7 +350,8 @@ _cfg_defaults_global = {
     'wiki_settings_page_css': 'CSS',
     'wiki_settings_page_general': 'General',
     'wiki_settings_page_security_defaults': 'Security',
-    'wiki_settings_page_user_groups': 'User Groups',
+    'wiki_settings_page_user_groups': 'Security',
+    'wiki_settings_page_map': 'Map',
     'SecurityPolicy': None,
 }
 
@@ -381,8 +383,22 @@ _cfg_defaults_local = {
     'gmaps_api_key': None,
     'interwikimap': 'Interwiki Map',
     'is_disabled': False,
+    'latitude': -121.74156,
+    'longitude': 38.55152,
     'logo_sizes': {},
     'license_text': '',
+    'map_names': ['Schools/Education', 'Government', 'Restaurants and Food',
+        'Cafes', 'Bars and Pubs', 'Churches/Religious', 'Arts and Entertainment',
+        'Parks and Recreation', 'Offices', 'People', 'Housing', 'Services',
+        'Shopping', 'Transportation and Streets', 'WiFi Hot Spots', '', '', '', '', 'Other' ] ,
+    'map_markers': [ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 ],
+    'map_marker_sizes': [ (21,25), (21,25), (21,25), (21,25), (21,25), (21,25), (21,25),
+                          (21,25), (21,25), (21,25), (21,25), (21,25), (21,25), (21,25),
+                          (21,25), (21,25), (21,25), (21,25), (21,25), (21,25) ],
+        # tags should be one shorter than the other map settings (catchall category)
+    'map_tags': [ 'school', 'government', 'food', 'cafe', 'bar', 'religious',
+        'arts', 'park', 'office', 'people', 'housing', 'service', 'shopping',
+        'transportation', 'wifi', '', '', '', '' ],
     'noindex_everywhere': False,
     'has_old_wiki_map': False,
     'page_front_page': 'Front Page',

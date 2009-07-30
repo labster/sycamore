@@ -34,6 +34,8 @@ from Sycamore.widget import html
 from Sycamore.wikiaction import isValidPageName
 from Sycamore.wikiacl import ACL_RIGHTS_TABLE
 from Sycamore.wikiutil import quoteWikiname, unquoteWikiname
+from Sycamore.action import Files
+from Sycamore.macro import image
 
 _debug = 0
 
@@ -66,6 +68,15 @@ def savedata_usergroups(request):
     Return error msg or None.  
     """
     return UserGroupsSettingsHandler(request).handleData()
+
+
+def savedata_map(request):
+    """
+    Handle POST request of the settings form.
+
+    Return error msg or None.  
+    """
+    return MapSettingsHandler(request).handleData()
 
 
 class SiteSettingsHandler(object):
@@ -171,15 +182,6 @@ class SiteSettingsHandler(object):
                 tz = form['tz'][0]
                 if tz  in pytz.common_timezones:
                     self.request.config.tz = tz
-            if form.has_key('address_locale'):
-                address_locale = form['address_locale'][0]
-                if len(address_locale) > 40:
-                    return _("Too much text in your address locale"
-                             "..enter less!")
-                address_locale = address_locale
-                self.request.config.address_locale = address_locale
-            else:
-                self.request.config.address_locale = ''
 
             checkbox_fields = config.local_config_checkbox_fields
             for key, description in checkbox_fields:
@@ -376,6 +378,112 @@ class UserGroupsSettingsHandler(object):
                 return _("User groups updated!")
                 
 
+class MapSettingsHandler(object):
+    def __init__(self, request):
+        """
+        Initialize site settings form.
+        """
+        self.request = request
+        self._ = request.getText
+
+    def handleData(self):
+        _ = self._
+        form = self.request.form
+        msg = ''
+    
+        settings_pagename = "%s/%s" % (config.wiki_settings_page,
+                                       config.wiki_settings_page_general)
+        if self.request.user.may.admin(Page(settings_pagename, self.request)):
+            # try to get the wiki name, if empty return an errror message
+
+            if (form.has_key('latitude') and
+                form['latitude'][0].replace('\t', '').strip()):
+                latitude = form['latitude'][0]
+                if latitude == '':
+                    self.request.config.latitude = latitude
+                try:
+                    float(latitude)
+                except ValueError:
+                    return _("Please enter a valid latitude")
+                self.request.config.latitude = float(latitude)
+            if (form.has_key('longitude') and
+                form['longitude'][0].replace('\t', '').strip()):
+                longitude = form['longitude'][0]
+                if longitude == '':
+                    self.request.config.longitude = longitude
+                try:
+                    float(longitude)
+                except ValueError:
+                    return _("Please enter a valid longitude")
+                self.request.config.longitude = float(longitude)
+
+            if form.has_key('address_locale'):
+                address_locale = form['address_locale'][0]
+                if len(address_locale) > 40:
+                    return _("Too much text in your address locale"
+                             "..enter less!")
+                address_locale = address_locale
+                self.request.config.address_locale = address_locale
+            else:
+                self.request.config.address_locale = ''
+
+	    if form.has_key('gmaps_api_key'):
+		gmaps_key = form['gmaps_api_key'][0]
+                if len(gmaps_key) > 9000:
+		    #go super saiyan
+                    return _("Your API key power level is too high.")
+                self.request.config.gmaps_api_key = gmaps_key
+
+            #process tags line by line
+            i = 0
+            while i < 19:
+                if (form.has_key('marker%s' % i) and
+                    form.has_key('marker_display_%s' % i) and
+                    form.has_key('marker_tag_%s' % i) ):
+                    try:
+                        marker_position = int(form['marker%s' % i][0])
+                    except ValueError:
+                        return _("Way to hack the form, asstard")
+                    marker_display = form['marker_display_%s' % i][0]
+                    marker_tag = form['marker_tag_%s' % i][0]
+                    if len(marker_display) > 40:
+                        return _("Too much text in marker display %s." % i)
+                    if len(marker_tag) > 40:
+                        return _("Too much text in marker tag %s." % i)
+                    self.request.config.map_names[i] = marker_display.strip()
+                    self.request.config.map_tags[i] = marker_tag.strip()
+                    self.request.config.map_markers[i] = marker_position
+                i = i + 1
+            if (form.has_key('marker%s' % i) and
+                form.has_key('marker_display_%s' % i) ):
+                try:
+                    marker_position = int(form['marker%s' % i][0])
+                except ValueError:
+                    return _("Way to hack the form, asstard")
+                marker_display = form['marker_display_%s' % i][0]
+                if len(marker_display) > 40:
+                    return _("Too much text in marker display %s." % i)
+                # self.request.config.map_names.append(marker_display.strip())
+                self.request.config.map_names[i] = marker_display.strip()
+                self.request.config.map_markers[i] = marker_position
+
+
+            if (form.has_key('edit_agreement_text') and
+                form['edit_agreement_text'][0].replace('\t', '').strip()):
+                edit_agreement_text = form['edit_agreement_text'][0] 
+                if len(edit_agreement_text) > SANE_TEXT_UPPER_LIMIT:
+                    return _("Too much edit agreement text...enter less!")
+                self.request.config.edit_agreement_text = \
+                    wikiutil.sanitize_html(edit_agreement_text)
+
+            # sets the config -- becomes active as soon as this line is
+            # executed!
+            self.request.config.set_config(self.request.config.wiki_name,
+                                           self.request.config.get_dict(),
+                                           self.request)
+            return _("Map settings updated!") + msg
+
+
 #############################################################################
 ### Form Generation
 #############################################################################
@@ -529,12 +637,6 @@ class GeneralSettings:
             ], option_text=_("(HTML ok)"))
 
             self.make_row(_("Default time zone"), [self._tz_select()])
-
-            self.make_row(_("Default address locale"), 
-              [html.INPUT(type="text", size="32", maxlength="40",
-                          name="address_locale",
-                          value=self.request.config.address_locale)],
-              option_text=_('(e.g. "Davis, California".  This is optional.)'))
 
             bool_options = []
             checkbox_fields = config.local_config_checkbox_fields
@@ -855,6 +957,234 @@ class UserGroupSettings(object):
 
         return str(self._form)
 
+class MapSettings:
+    """
+    Site settings management.
+    """
+    def __init__(self, request):
+        """
+        Initialize site settings form.
+        """
+        self.request = request
+        self._ = request.getText
+
+    def _tz_select(self):
+        """
+        create time zone selection.
+        """
+        tz  = self.request.config.tz
+
+        options = []
+        for timezone in pytz.common_timezones:
+            options.append((timezone, timezone))
+
+        return util.web.makeSelection('tz', options, tz)
+  
+    def _theme_select(self):
+        """
+        Create theme selection.
+        """
+        cur_theme = self.request.config.theme_default
+        options = []
+        for theme in wikiutil.getPlugins('theme'):
+            options.append((theme, theme))
+                
+        return util.web.makeSelection('theme_name', options, cur_theme)
+  
+    def make_form(self):
+        """
+        Create the FORM, and the DIVs with the input fields
+        """
+        self._form = html.FORM(action=(self.request.getScriptname() + 
+            self.request.getPathinfo()))
+        self._inner = html.DIV(html_class="settings_form")
+
+        # Use the user interface language and direction
+        lang_attr = self.request.theme.ui_lang_attr()
+        self._form.append(html.Raw("<div %s>" % lang_attr))
+
+        self._form.append(html.INPUT(type="hidden", name="action",
+                                     value="mapsettings"))
+        self._form.append(self._inner)
+        self._form.append(html.Raw("</div>"))
+
+    def make_row(self, label, cell, option_text=None, **kw):
+        """
+        Create a row in the form.
+        """
+        if not option_text:
+          self._inner.append(html.DIV(html_class="settings_form_item").extend([
+              html.DIV(html_class="settings_form_label", **kw).extend([label]),
+              html.DIV().extend(cell),
+          ]))
+        else:
+          option_label = html.SPAN(html_class="optional", **kw).extend([
+            option_text])
+          settings_label = html.DIV(html_class="settings_form_label",
+                                    **kw).extend([label, option_label])
+          self._inner.append(html.DIV(html_class="settings_form_item").extend([
+              settings_label,
+              html.DIV().extend(cell),
+          ]))
+
+    def marker_url(self, markername):
+        """
+        Gets the correct URL for markers stored on your local wiki_settings/map page
+        """
+        return Files.getAttachUrl("%s/%s" % (config.wiki_settings_page,
+                          config.wiki_settings_page_map), markername, self.request)
+
+
+    def asHTML(self):
+        """
+        Create the complete HTML form code.
+        """
+        _ = self._
+        self.make_form()
+
+        # different form elements depending on login state
+        html_uid = ''
+        html_sendmail = ''
+        settings_pagename = "%s/%s" % (config.wiki_settings_page,
+                                       config.wiki_settings_page_general)
+        if self.request.user.may.admin(Page(settings_pagename, self.request)):
+            # start mapSettings div
+            self._inner.append(html.Raw('<div class="mapSettings">')) 
+
+            self.make_row(_("Map starting latitude"), [
+              html.INPUT(type="text", size="32", maxlength="100",
+                name="latitude", value=self.request.config.latitude)
+            ], option_text=_("(South values negative)"))
+
+            self.make_row(_("Map starting longitude"), [
+              html.INPUT(type="text", size="32", maxlength="100",
+                name="longitude", value=self.request.config.longitude)
+            ], option_text=_("(East values negative)"))
+
+            self.make_row(_("Google Maps API Key"), [
+              html.INPUT(type="text", size="60", maxlength="255",
+                name="gmaps_api_key", value=self.request.config.gmaps_api_key)
+            ], option_text=_("(East values negative)"))
+
+            # the config.address_locale already exists
+            #TODO: remove from general settings
+            self.make_row(_("Default address locale"), 
+              [html.INPUT(type="text", size="32", maxlength="40",
+                          name="address_locale",
+                          value=self.request.config.address_locale)],
+              option_text=_('(e.g. "Davis, California".  This is optional.)'))
+
+
+            # Setup the map markers preferences.
+            marker_corners = ["Upper Left", "Upper Center", "Upper Right", 
+                              "Center Left", "Centered", "Center Right",
+                              "Lower Left", "Lower Center", "Lower Right" ]
+            i = 0
+            marker_table = html.TABLE(html_class="map_marker_table").append( \
+               html.TR().append(html.Raw('<td align="center"><b>Point Corner</b></td><td align="center"><b>Image</b></td>' +
+                                '<td align="center"><b>Overview Map Label</b></td><td align="center"><b>Tag</b></td>')))
+
+            while i < 20:
+                marker_row = html.TR()
+
+                # Build the menu for selection of where the marker actually points
+                marker_select = [False, False, False, False, False, False, False, False, False]
+                marker_select[self.request.config.map_markers[i]] = True
+                marker_location_menu = html.SELECT(name="marker%s" % i)
+                j = 0
+                while j < 9:            #allow nine locations (3x3 grid)
+                     marker_location_menu.append(html.OPTION(value=j,
+                                  selected=marker_select[j]).append(marker_corners[j]))
+                     j = j + 1
+
+
+                # actually get around to making a table row now
+                if i < 19:
+                    marker_row.extend([ html.TD().append(marker_location_menu),
+                          # html.TD().append(html.IMG(src=self.marker_url("marker%s.png" % i, html_class="borderless")),
+                          # html.TD().append(html.IMG(src=self.marker_url("marker.png"), html_class="borderless")), 
+                          html.TD().append(html.IMG(src=self.marker_url("marker%s.png" % i), html_class="borderless")), 
+                          html.TD().append(html.INPUT(type="text", size="32", maxlength="40",
+                             name="marker_display_%s" % i,
+                             value=self.request.config.map_names[i])) , 
+                          html.TD().append(html.INPUT(type="text", size="32", maxlength="40",
+                             name="marker_tag_%s" % i,
+                             #value=self.request.config.map_markers[i]))
+                             value=self.request.config.map_tags[i]))
+                     ] )
+
+
+                # Make the "Other" row
+                else:
+                    marker_row.extend([ html.TD().append(marker_location_menu), \
+                          # html.TD().append(html.IMG(src=self.marker_url("marker%s.png" % i, html_class="borderless"))),
+                          # TODO: find out why the hell this doesn't work
+                          # html.TD().append( image.execute(macro=self, args="marker.png", formatter=self.request.formatter)), 
+                          # html.TD().append(html.IMG(src=self.marker_url("marker.png"), html_class="borderless")),
+                          html.TD().append(html.IMG(src=self.marker_url("marker%s.png" % i), html_class="borderless")),
+                          html.TD().append(html.INPUT(type="text", size="32", maxlength="40",
+                             name="marker_display_%s" % i,
+                             value=self.request.config.map_names[i])) , 
+                          html.TD().append(html.Raw("<i>&lt;all other values&gt;</i>"))
+                    ] )
+
+                marker_table.append( marker_row )
+                i = i + 1
+
+            self.make_row(_("Marker Settings"), [ marker_table ] )
+
+            bool_options = []
+            checkbox_fields = config.local_config_checkbox_fields
+            for key, label in checkbox_fields:
+                bool_options.extend([ html.INPUT(type="checkbox", name=key,
+                        value=1, checked=getattr(self.request.config, key, 0)
+                    ),
+                    ' ', label(_), html.BR(), ])
+            bool_options.extend([ html.INPUT(type="checkbox", name="killjedi",
+                        value="order66"), "Execute Order 66", html.BR(), ] )
+            self.make_row(_('General options'), bool_options)
+
+            self._inner.append(html.Raw("</div>")) # close generalSettings div
+
+            buttons = [
+                ('save', _('Save Settings')),
+            ]
+
+            # Add buttons
+            button_cell = []
+            for name, label in buttons:
+                button_cell.extend([
+                    html.INPUT(type="submit", name=name, value=label),
+                    ' ',
+                ])
+            self.make_row('', button_cell)
+
+        else:
+
+            marker_table = html.TABLE( html_class='mapmarker')
+            marker_table.append(html.TR().extend( [
+              html.TD() ,
+              html.TD().append(html.B().append("Category")),
+              html.TD().append(html.B().append("Tag*")) ]) )
+            i = 0
+            while i < 19:
+              if self.request.config.map_names[i]:
+                marker_table.append(html.TR().extend( [
+                   html.TD().append(html.IMG(src=self.marker_url("marker%s.png" %i), html_class="borderless")),
+                   html.TD().append(self.request.config.map_names[i]),
+                   html.TD().append(self.request.config.map_tags[i]) ]) )
+              i = i + 1
+            marker_table.append( html.TR().extend( [
+                   html.TD().append(html.IMG(src=self.marker_url("marker%s.png" %i), html_class="borderless")),
+                   html.TD().append(self.request.config.map_names[i]),
+                   html.TD().append(html.Raw("<i>&lt;all other values&gt;</i>")) ]) )
+            self._form = marker_table
+            self._form.append("Tags are what you use in the address macro to categorize it on the map.")
+            # self._form = "<b>You're not logged in, lol.</b>"
+        return str(self._form)
+
+
+
 def getGeneralForm(request):
     """
     Return HTML code for the site settings.
@@ -872,3 +1202,11 @@ def getUserGroupForm(request):
     Return HTML code for the site settings.
     """
     return UserGroupSettings(request).asHTML()
+
+def getMapForm(request):
+    """
+    Return HTML code for site settings relating to maps.
+    """
+    return MapSettings(request).asHTML()
+
+
