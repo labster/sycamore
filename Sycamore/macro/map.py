@@ -328,7 +328,7 @@ def prep_geojson(macro):
     
     cursor.execute('SELECT pagename_propercased, x, y, tag FROM mappoints WHERE wiki_id=%s' % str(macro.request.config.wiki_id))
     rows = cursor.fetchall()
-    if not rows: return ''
+    if not rows: return ''  #FIX: this causes stack trace if nothing's in the map table
     arbid = 0 #arbitrary id for GeoJSON format
     for row in rows:
         (pagename, longitude, latitude, tag) = row

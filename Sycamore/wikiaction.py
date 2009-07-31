@@ -1271,6 +1271,13 @@ def do_usergroupsettings(pagename, request):
     request.setHttpHeader(("Content-Type", "text/html"))
     Page(pagename, request).send_page(msg=savemsg)
 
+def do_mapsettings(pagename, request):
+    from Sycamore import sitesettings 
+    # we end up sending cookie headers here..possibly
+    savemsg = sitesettings.savedata_map(request) 
+    request.setHttpHeader(("Content-Type", "text/html"))
+    Page(pagename, request).send_page(msg=savemsg)
+
 def do_bookmark(pagename, request):
     if request.form.has_key('time'):
         if request.form['time'][0] =='del':

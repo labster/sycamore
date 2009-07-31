@@ -1,0 +1,80 @@
+/* map.css
+ * This stylesheet controls the look and feel of the map interface.
+ * Some of the elements apply to all maps, and some just to the overview map.
+ * v0.1
+ * */
+
+/* All maps */
+
+#map img { border: 0 }
+
+/* Overview map */
+
+#map {
+   width: 600px;
+   height: 500px;
+   margin: 0;
+   padding: 0;
+   border: none;
+   float: left;
+}
+
+div.maplegend {
+	width: 300px;
+        float: left;
+        padding-left: 20px;
+}
+
+a.maptab {
+  margin-left: .4em;
+  padding: 2px 1em 2px 1em;
+  width: 100%;
+  background-color: #7799cc;
+  color: #000088;
+  border-top: 1px solid #555555;
+  border-left: 1px solid #555555;
+  border-right: 1px solid #555555;
+  text-decoration: none;
+  font-size: 10px;
+}
+
+a.maptab:hover {
+     background-color: #ccddff;
+}
+
+
+div.maptabcontents {
+	height: 540px;
+	background: #ccddff;
+	overflow: hidden;
+	// border: 1px solid #000;
+	padding: 0px 3px 2px 2px;
+	
+}
+
+div.maptabcontents div.maptabcontent {
+	float: right;
+	width: 100%;
+	height: 102%;
+	overflow-y: auto;
+}
+
+div.maptabcontents img {
+        border: 0px;
+}
+
+div.maptabcontents div.content h2 {
+	margin-top: 3px;
+}
+
+table.mapplaces img {
+        border: 0;
+}
+
+table.mapplaces tr {
+       vertical-align: center;
+}
+
+
+
+

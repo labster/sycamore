@@ -2,6 +2,7 @@
 """
     Sycamore - google map api address macro
 
+    @copyright: 2009 by Brent Laabs <bslaabs@gmail.com>
     @copyright: 2007 by Philip Neustrom <philipn@gmail.com>
     @copyright: 2006 by rottenchester <rottenchester@gmail.com>
     @license: GNU GPL, see COPYING for details.
@@ -160,7 +161,7 @@ class Location:
     """
     db wrapper class to read/write/create location rows
     
-    place = Location(self,macro,formatter,name,address,lat,long)
+    place = Location(self,macro,formatter,name,address,lat,long,tag)
 
     latitude = place.latitude
     longitude = place.longitude
@@ -168,23 +169,31 @@ class Location:
     uses the Geocode class
 
     """
-    def __init__(self,macro,formatter,address=None,lat=None,long=None): 
+    def __init__(self,macro,formatter,address=None,latitude=None,longitude=None,tag=None): 
         self.macro = macro
         self.formatter = formatter
         self.name = macro.formatter.page.page_name
         self.address = address
+        self.tag = tag
 
-        self.__lookupPlace()
-        address_changed = self._has_address_changed(address)
+        if self.address and not latitude:
+            self.__lookupPlace()
+            address_changed = self._has_address_changed(address)
 
-        self.latitude = lat or self.latitude
-        self.longitude = long or self.longitude
+            self.latitude = latitude or self.latitude
+            self.longitude = longitude or self.longitude
 
-        ignore = (self.formatter.name != 'text_python' or
-                  self.formatter.page.prev_date)
-        if (self.address and
-            (self.latitude is None and address_changed) and not ignore):
-            self.__geocodePlace(self.address)
+            ignore = (self.formatter.name != 'text_python' or
+                      self.formatter.page.prev_date)
+            if (self.address and
+                (self.latitude is None and address_changed) and not ignore):
+                self.__geocodePlace(self.address)
+        else:
+            #assume that no one passed us a map point with no geodata
+            #checking should occur elsewhere, nothing this constructor can do about it
+            self.latitude = latitude
+            self.longitude = longitude
+
 
     def _has_address_changed(self, new_address):
         """
@@ -242,13 +251,13 @@ class Location:
         if ignore:
             return
 
-        if lat is None:
+        if self.latitude is None:
             self.__geocodePlace(address)
         else:
             self.latitude = lat
             self.longitude = long
         if self.latitude is not None:
-            self.__insertEntry(address, theuser_id, theuser_ip)
+            self.__insertEntry(theuser_id, theuser_ip)
             self.__clearCaches()
 
         self.address = address
@@ -261,7 +270,7 @@ class Location:
         self.latitude = place.latitude
         self.longitude = place.longitude
 
-    def __insertEntry(self,address, theuser_id, theuser_ip):
+    def __insertEntry(self, theuser_id, theuser_ip):
         """
         insert a location entry in the db
         """
@@ -279,7 +288,8 @@ class Location:
                        'created_by_ip':theuser_ip,
                        'pagename_propercased':
                             self.macro.formatter.page.proper_name(),
-                       'address':address})
+                       'address':self.address,
+                       'tag':self.tag})
         has_same_point = cursor.fetchone()
         if has_same_point:
             cursor.execute("""DELETE from mapPoints
@@ -295,18 +305,19 @@ class Location:
                            'created_by_ip':theuser_ip,
                            'pagename_propercased':
                                self.macro.formatter.page.proper_name(),
-                           'address':address}, isWrite=True)
+                           'address':self.address,
+                           'tag':self.tag}, isWrite=True)
 
         cursor.execute("""INSERT INTO mappoints
                           (pagename, x, y, created_time, created_by,
                            created_by_ip,
                            pagename_propercased,
-                           address, wiki_id)
+                           address, tag, wiki_id)
                            VALUES (%(pagename)s,%(x)s,%(y)s,
                            %(created_time)s,
                            %(created_by)s,%(created_by_ip)s,
                            %(pagename_propercased)s,%(address)s,
-                           %(wiki_id)s)""",
+                           %(tag)s,%(wiki_id)s)""",
                        {'pagename':self.name,
                         'wiki_id':self.macro.request.config.wiki_id,
                         'x':self.latitude,
@@ -316,7 +327,8 @@ class Location:
                         'created_by_ip':theuser_ip,
                         'pagename_propercased':
                             self.macro.formatter.page.proper_name(),
-                        'address':address}, isWrite=True)
+                        'address':self.address,
+                        'tag':self.tag}, isWrite=True)
 
     def __updateEntry(self,address):
         """
@@ -340,17 +352,22 @@ class Location:
         create a list of nearby locations, with a maximum
         number of locations = max, and a radius of distance degrees
         """
+        #sqlite fix for max=None
+        if config.db_type == 'sqlite':
+           if max == None:
+              max = 5000
+
         cursor = self.macro.request.cursor
         cursor.execute("""SELECT pagename_propercased, address, x, y
                          FROM mapPoints, curPages
                          WHERE abs(%(long1)s - cast(y as numeric))+
-                               abs(%(lat1)s-cast(x as numeric)) < %(dist)s and
+                               abs(%(lat1)s - cast(x as numeric)) < %(dist)s and
                                pagename <> %(pagename)s and
                                curPages.name = mapPoints.pagename and
                                mapPoints.wiki_id = %(wiki_id)s and
                                curPages.wiki_id = %(wiki_id)s
-                         ORDER BY abs(%(long2)s - cast(y as numeric))+
-                                  abs(%(lat2)s-cast(x as numeric))
+                         ORDER BY abs(%(long2)s - cast(y as numeric)) +
+                                  abs(%(lat2)s - cast(x as numeric))
                          LIMIT %(max)s""",
                        {'long1':self.longitude,
                         'lat1':self.latitude,
@@ -378,6 +395,60 @@ class Location:
           pagename = entry['name']
           self.macro.request.postCommitActions.append(
             (caching.CacheEntry(pagename, self.macro.request).clear, ))
+
+def get_point_args(text):
+    """
+    Returns the separates and returns arguments for mapping.
+    Copes with all of the legacy formats we have out there.
+    Input: text string
+    Output: list of: address, latitude, longitude, tag
+    """
+    class pointinfo:
+       address = None
+       latitude = None
+       longitude = None
+       tag = None 
+
+    point = pointinfo()
+    # text = "123 Sesame Street, New York, 12345"
+
+    getarg = re.compile(r'"?\s*,\s*"?')
+    starts_with_quote = re.compile(r'^\s*"').match
+    is_numeric = re.compile(r'^[\d\-.]*$').match
+
+    # sort old style (address only) from those without an address field
+    # note that this still requires address to be the first field, with quotes
+    #   in a long list
+    if not starts_with_quote(text):
+      if is_numeric(getarg.split(text, 1)[0]):
+        pass
+      else:
+        point.address = text
+        return (point.address, point.latitude, point.longitude, point.tag)
+    else:
+      if not is_numeric(getarg.split(text, 1)[0]):
+        arglist = re.compile(r'"\s*,\s"?').split(text.lstrip(' "'), 1)
+        point.address = arglist[0]
+        if len(arglist) == 1:
+           point.address = point.address.rstrip(' "')
+           return (point.address, point.latitude, point.longitude, point.tag)
+        else:
+           text = arglist[1]
+
+
+    # FYI this algorithm really doesn't care about extra arguments,
+    #     it just overwrites them where applicable
+    text = text.rstrip(' "\t')
+    point.split = getarg.split(text)
+    for arg in getarg.split(text):
+      if is_numeric(arg):
+         if not point.latitude:
+            point.latitude = arg
+         else:
+            point.longitude = arg
+      else:
+         point.tag = arg
+    return (point.address, point.latitude, point.longitude, point.tag)
 
 
 def mapHTML(macro, place, nearby):
@@ -408,6 +479,8 @@ def execute(macro, args, formatter):
     if not formatter:
         formatter = macro.formatter
 
+    #saving old code snippet if get_point_args is borken:
+    """
     # re for old format Address("address","description")
     oldformat = re.compile(r'^\s*\"(.+)\"\s*,\s*\"(.+)\"\s*$')
 
@@ -423,27 +496,45 @@ def execute(macro, args, formatter):
     else:       
         address = args
         address = address.strip('"')
-         
-    # allow links in the address to work properly
-    wikified_address = wikiutil.stripOuterParagraph(
-        wikiutil.wikifyString(address, macro.request, formatter.page))
-    address = wikiutil.simpleStrip(macro.request, wikified_address).strip()
+    """
 
-    if macro.request.config.address_locale and address.find(',') == -1:
-        # add the address locale if it's lacking
-        full_address = '%s, %s' % (address,
-                                   macro.request.config.address_locale)
+    (address, lat, long, tag) = get_point_args(args)
+
+
+    #return "aa%sbb%scc%sdd%see" % (address, lat, long, tag)
+    if lat and not long:
+        #ur doin it wrong
+        return args
+
+
+    if address:
+        # allow links in the address to work properly
+        wikified_address = wikiutil.stripOuterParagraph(
+            wikiutil.wikifyString(address, macro.request, formatter.page))
+        address = wikiutil.simpleStrip(macro.request, wikified_address).strip()
+
+        if macro.request.config.address_locale and address.find(',') == -1:
+            # add the address locale if it's lacking
+            full_address = '%s, %s' % (address,
+                                       macro.request.config.address_locale)
+        else:
+            full_address = address
     else:
-        full_address = address
+        #don't add the locale if there was no address given
+        full_address = None
 
-    if macro.request.config.has_old_wiki_map:
-        # we just ignore [[address]] on davis wiki
-        return wikified_address
+    ####### I don't know if this was ever implemented
+    #if macro.request.config.has_old_wiki_map:
+    #    # we just ignore [[address]] on davis wiki
+    #    return wikified_address
     
-    if lat is None:
-        place = Location(macro,formatter,full_address)
-    else:
-        place = Location(macro,formatter,full_address,lat,long)
+
+    place = Location(macro, formatter, full_address, lat, long, tag)
+    ###### Saving just in case
+    #if lat is None:
+    #    place = Location(macro,formatter,full_address)
+    #else:
+    #    place = Location(macro,formatter,full_address,lat,long)
 
     if place.latitude is None:
         return wikified_address

@@ -583,6 +583,7 @@ def create_tables(cursor):
           pagename varchar(100) not null,
           x varchar(100) not null,
           y varchar(100) not null,
+          tag varchar(40),
           created_time double,
           created_by char(20),
           created_by_ip char(16),
@@ -597,6 +598,7 @@ def create_tables(cursor):
           pagename varchar(100) not null,
           x varchar(100) not null,
           y varchar(100) not null,
+          tag varchar(40),
           created_time double precision,
           created_by char(20),
           created_by_ip inet,
@@ -620,6 +622,8 @@ def create_tables(cursor):
         mapPoints (created_time, wiki_id);""", isWrite=True)  # local rc
     cursor.execute("""CREATE INDEX mapPoints_address on
         mapPoints (address);""", isWrite=True)
+    cursor.execute("""CREATE INDEX mapPoints_tag on
+        mapPoints (tag);""", isWrite=True)
     
     if config.db_type == 'mysql':
         cursor.execute("""create table oldMapPoints
@@ -627,6 +631,7 @@ def create_tables(cursor):
           pagename varchar(100) not null,
           x varchar(100) not null,
           y varchar(100) not null,
+          tag varchar(40),
           created_time double,
           created_by char(20),
           created_by_ip char(16),
@@ -644,6 +649,7 @@ def create_tables(cursor):
           pagename varchar(100) not null,
           x varchar(100) not null,
           y varchar(100) not null,
+          tag varchar(40),
           created_time double precision,
           created_by char(20),
           created_by_ip inet,

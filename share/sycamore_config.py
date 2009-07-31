@@ -89,7 +89,7 @@ wiki_farm_from_wiki_msg = """<div style="float: right; width: 12em; padding: 1em
 
 # database settings.
 db_type = 'postgres'  # can be 'mysql' or 'postgres'
-db_name = 'wiki'
+db_name = 'wiki2'
 db_user = 'postgres'
 db_user_password = 'satire'
 # The IP address or hostname of the database.  Leave empty for local non-networked connection (usually works)

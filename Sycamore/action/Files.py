@@ -46,7 +46,13 @@ EDITABLE_ICONS = [
     'editicon.png', 'infoicon.png', 'talkicon.png', 'articleicon.png',
     'viewmapicon.png', 'hidemapicon.png']
 
-EDITABLE_CSS = ['style.css', 'layout.css', 'common.css']
+EDITABLE_CSS = ['style.css', 'layout.css', 'common.css', 'map.css']
+
+EDITABLE_MARKERS = [ 'marker0.png',
+    'marker1.png', 'marker2.png', 'marker3.png', 'marker4.png', 'marker5.png',
+    'marker6.png', 'marker7.png', 'marker8.png', 'marker9.png', 'marker10.png',
+    'marker11.png', 'marker12.png', 'marker13.png', 'marker14.png', 'marker15.png',
+    'marker16.png', 'marker17.png', 'marker18.png', 'marker19.png' ]
 
 MAX_FILENAME_LENGTH = 100
 
@@ -657,6 +663,18 @@ def checkSpecialFiles(filename, pagename, uploaded_time, request, image=None):
                 request.config.set_config(request.config.wiki_name,
                                           request.config.get_dict(), request)
                 return
+
+    elif pagename == ('%s/%s' % (config.wiki_settings_page,
+                                 config.wiki_settings_page_map)).lower():
+        i = 0
+        for marker_filename in EDITABLE_MARKERS:
+            if filename == marker_filename:
+                request.config.map_marker_sizes[i] = image.size
+                request.config.set_config(request.config.wiki_name,
+                                          request.config.get_dict(), request)
+                return
+            i = i + 1
+
 
 def execute(pagename, request):
     """
